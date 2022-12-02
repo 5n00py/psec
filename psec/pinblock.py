@@ -13,6 +13,7 @@ __all__ = [
     "encode_pinblock_iso_2",
     "encode_pinblock_iso_3",
     "encode_pin_field_iso_4",
+    "encode_pan_field_iso_4",
     "decode_pinblock_iso_0",
     "decode_pinblock_iso_2",
     "decode_pinblock_iso_3",
@@ -204,6 +205,41 @@ def encode_pin_field_iso_4(pin: str) -> bytes:
     )  # Only the low nibble is relevant, values 4 - C.
     pinblock_str = "4" + pin_len_hex + pin + "A" * (14 - len(pin)) + random_pad
     return _binascii.a2b_hex(pinblock_str)
+
+
+def encode_pan_field_iso_4(pan: str) -> bytes:
+    r"""Encode ISO 9564 PIN block format 4 plain text primary account number (PAN) field.
+    ISO format 4 plain text primary account number field is a 16 byte value that consits of
+        - PAN length. A 4 bit hex value in the range from 0 to 7 indicate a PAN length of 12 plus the value of the field
+                      (ranging from dec. 12 to 19). If the PAN is less than 12 digits, the digits are right justified and
+                      padded to the left with zeros and PAN length is set to 0.
+        - PAN digits. Each digit is a 4 bit hex value in the range from 0 to 9.
+        - Pad digits. A 4 bit hex value set to 0.
+    Parameters
+    ----------
+    pan : str
+        ASCII Personal Account Number.
+    Returns
+    -------
+    bytes
+        Binary 16-byte PAN field.
+    Raises
+    ------
+    ValueError
+        PAN must be between 1 and 19 digits long.
+    Examples
+    --------
+    >>> from psec.pinblock import encode_pan_field_iso_4
+    >>> encode_pan_field_iso_4("112233445566778899").hex().upper()
+    '61122334455667788990000000000000'
+    """
+
+    if len(pan) < 1 or len(pan) > 19 or not _tools.ascii_numeric(pan):
+        raise ValueError("PAN must be between 1 and 19 digits long.")
+
+    pan_field = (str(max(0, len(pan) - 12)) + (pan.rjust(12, "0"))).ljust(32, "0")
+
+    return _binascii.a2b_hex(pan_field)
 
 
 def decode_pinblock_iso_0(pinblock: bytes, pan: str) -> str:

@@ -123,6 +123,33 @@ def test_encode_pin_field_iso_4(pin: str, pin_field: str) -> None:
     assert pin_field == pinblock.encode_pin_field_iso_4(pin).hex().upper()[:16]
 
 
+@pytest.mark.parametrize(
+    ["pan", "error"],
+    [
+        ("", "PAN must be between 1 and 19 digits long."),
+        ("12345678901234567890", "PAN must be between 1 and 19 digits long."),
+    ],
+)
+# fmt: on
+def test_encode_pan_field_iso_4_exception(pan: str, error: str) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.encode_pan_field_iso_4(pan)
+
+
+@pytest.mark.parametrize(
+    ["pan", "pan_field"],
+    [
+        ("112233445566778899", "61122334455667788990000000000000"),
+    ],
+)
+# fmt: on
+def test_encode_pan_field_iso_4(pan: str, pan_field: str) -> None:
+    assert pan_field == pinblock.encode_pan_field_iso_4(pan).hex().upper()
+
+
 # fmt: off
 @pytest.mark.parametrize(
     ["pin_block", "pan", "error"],
