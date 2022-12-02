@@ -1,6 +1,9 @@
 import pytest
 from psec import pinblock
 
+import secrets as _secrets
+from os import urandom as _urandom
+
 
 # fmt: off
 @pytest.mark.parametrize(
@@ -192,6 +195,22 @@ def test_encipher_pinblock_iso_4_det(
     assert pin_block == pinblock.encipher_pinblock_iso_4(key, pin, pan).hex().upper()
 
 
+# non deterministic
+def test_encipher_decipher_pinblock_iso_4_non_det() -> None:
+    pin_len = _secrets.choice(range(4, 12))
+    pin_range_start = 10 ** (pin_len - 1)
+    pin_range_end = (10**pin_len) - 1
+    pin = str(_secrets.choice(range(pin_range_start, pin_range_end)))
+    pan = "12334567890123456"
+    key_lens = [16, 24, 32]
+    key_len = _secrets.choice(key_lens)
+    key = _urandom(key_len)
+    pin_block = pinblock.encipher_pinblock_iso_4(key, pin, pan)
+    pin_calc = pinblock.decipher_pinblock_iso_4(key, pin_block, pan)
+
+    assert pin == pin_calc
+
+
 # fmt: off
 @pytest.mark.parametrize(
     ["pin_block", "pan", "error"],
@@ -331,3 +350,78 @@ def test_decode_pinblock_iso_4_exception(pin_block: bytes, error: str) -> None:
 )
 def test_decode_pin_field_iso_4(pin_field: bytes, pin) -> None:
     assert pin == pinblock.decode_pin_field_iso_4(pin_field)
+
+
+@pytest.mark.parametrize(
+    ["key", "pin_block", "pan", "error"],
+    [
+        (
+            bytes.fromhex("C1D0F8FB4958670DBA40AB1F3752EF0D"),
+            bytes.fromhex("CC17F65586BFD0953010226C4FC5B3CA00"),
+            "432198765432109870",
+            "Data length (17) must be multiple of AES block size 16.",
+        ),
+        (
+            bytes.fromhex("C1D0F8FB4958670DBA40AB1F3752EF0D"),
+            bytes.fromhex("CC17F65586BFD0953010226C4FC5B3CA"),
+            "43219876543210987099",
+            "PAN must be between 1 and 19 digits long.",
+        ),
+        (
+            bytes.fromhex("E60B15B90ABDF14CEE337C97440F0D6E"),
+            bytes.fromhex("7D5AF4C33667A2098626027FB7A9A1B7"),
+            "4266229809609384667",
+            "PIN block is not ISO format 4: control field `3`",
+        ),
+        (
+            bytes.fromhex("C7BBEBA16C5AD97D5866450718C03750"),
+            bytes.fromhex("2F9C910447F17293EC95DEDE1E3CA201"),
+            "8220499325458689523",
+            "PIN is not numeric: `1AB2`",
+        ),
+        (
+            bytes.fromhex("820F6C7C12355BDFF1AB6CE12E8EED89"),
+            bytes.fromhex("CCF310A8300B46C925A86B1098089301"),
+            "939589847393485609",
+            "PIN block filler is incorrect: `BBBBBBBBBB`",
+        ),
+        (
+            bytes.fromhex("4FE3F0311936FBCE44F17159F1659CF09B2BF8913BB514A1"),
+            bytes.fromhex("51334B00A6CBA3EC7B1C6F871F060AFC"),
+            "2129100799029059903",
+            "PIN length must be between 4 and 12: `3`",
+        ),
+    ],
+)
+# fmt: on
+def test_decipher_pinblock_iso_4_exception(
+    key: bytes, pin_block: bytes, pan: str, error: str
+) -> None:
+    with pytest.raises(ValueError) as e:
+        pinblock.decipher_pinblock_iso_4(key, pin_block, pan)
+    assert e.value.args[0] == error
+
+
+@pytest.mark.parametrize(
+    ["key", "pin_block", "pan", "pin"],
+    [
+        # Test vector from ep2 - eft/pos 2000 Security Specification, Version 8.0.0, 8.4: PIN Encryption
+        (
+            bytes.fromhex("C1D0F8FB4958670DBA40AB1F3752EF0D"),
+            bytes.fromhex("CC17F65586BFD0953010226C4FC5B3CA"),
+            "432198765432109870",
+            "1234",
+        ),
+        # PAN length < 12
+        (
+            bytes.fromhex("00112233445566778899AABBCCDDEEFF"),
+            bytes.fromhex("39B69B1B91FE05D48F7EF0D68EB2CBD6"),
+            "1",
+            "123456",
+        ),
+    ],
+)
+def test_decipher_pinblock_iso_4(
+    key: bytes, pin_block: bytes, pan: str, pin: str
+) -> None:
+    assert pin == pinblock.decipher_pinblock_iso_4(key, pin_block, pan)
