@@ -300,3 +300,34 @@ def test_decode_pinblock_iso_3_exception(
 )
 def test_decode_pinblock_iso_3(pin: str, pin_block: bytes, pan: str) -> None:
     assert pin == pinblock.decode_pinblock_iso_3(pin_block, pan)
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    ["pin_block", "error"],
+    [
+        (bytes.fromhex("441234AAAAAAAAAA548ED7FD6549595000"), "PIN field must be 16 bytes long"),
+        (bytes.fromhex("341261AAAAEDCB"), "PIN field must be 16 bytes long"),
+        (bytes.fromhex("541234AAAAAAAAAA548ED7FD65495950"), "PIN block is not ISO format 4: control field `5`"),
+        (bytes.fromhex("43123AAAAAAAAAAA548ED7FD65495950"), "PIN length must be between 4 and 12: `3`"),
+        (bytes.fromhex("441234ABCDEFABCD548ED7FD65495950"), "PIN block filler is incorrect: `ABCDEFABCD`"),
+        (bytes.fromhex("4412D4AAAAAAAAAA548ED7FD65495950"), "PIN is not numeric: `12D4`"),
+    ],
+)
+# fmt: on
+def test_decode_pinblock_iso_4_exception(pin_block: bytes, error: str) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.decode_pin_field_iso_4(pin_block)
+
+
+@pytest.mark.parametrize(
+    ["pin_field", "pin"],
+    [
+        (bytes.fromhex("441234AAAAAAAAAA548ED7FD65495950"), "1234"),
+    ],
+)
+def test_decode_pin_field_iso_4(pin_field: bytes, pin) -> None:
+    assert pin == pinblock.decode_pin_field_iso_4(pin_field)

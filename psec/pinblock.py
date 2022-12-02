@@ -488,3 +488,64 @@ def decode_pinblock_iso_3(pinblock: bytes, pan: str) -> str:
         raise ValueError(f"PIN is not numeric: `{pin}`")
 
     return pin
+
+
+def decode_pin_field_iso_4(pin_field: bytes) -> str:
+    r"""Decode ISO 9564 PIN block format 4 plain text PIN field.
+        ISO format 4 PIN plain text PIN field is a 16 byte value that consits of
+            - Control field. A 4 bit hex value set to 4.
+            - PIN length. A 4 bit hex value in the range from 4 to C.
+            - PIN digits. Each digit is a 4 bit hex value in the range from 0 to 9.
+            - Fill digits. Each digit is a 4 bit hex value set to A.
+            - Random pad character. A 4 bit hex value in the range from 0 to F.
+    Parameters
+    ----------
+    pin_field : bytes
+        Binary 16-byte PIN field.
+    Returns
+    -------
+    pin : str
+        ASCII Personal Identification Number.
+    Raises
+    ------
+    ValueError
+        PIN field must be 16 bytes long
+        PIN field must be 32 hexchars long
+        PIN field is not ISO format 4: control field `X`
+        PIN field filler is incorrect: `filler`
+        PIN length must be between 4 and 12: `pin length`
+        PIN is not numeric: `pin`
+    Examples
+    --------
+    >>> from psec.pinblock import decode_pin_field_iso_4
+    >>> pin_field = bytes.fromhex("441234AAAAAAAAAA548ED7FD65495950")
+    >>> decode_pin_field_iso_4(pin_field)
+    '1234'
+    """
+
+    if len(pin_field) != 16:
+        raise ValueError("PIN field must be 16 bytes long")
+
+    pin_field_str = pin_field.hex().upper()
+
+    if pin_field_str[0] != "4":
+        raise ValueError(
+            f"PIN block is not ISO format 4: control field `{pin_field_str[0]}`"
+        )
+
+    pin_len = int(pin_field_str[1], 16)
+
+    if pin_len < 4 or pin_len > 12:
+        raise ValueError(f"PIN length must be between 4 and 12: `{pin_len}`")
+
+    if pin_field_str[pin_len + 2 : 16] != ("A" * (14 - pin_len)):
+        raise ValueError(
+            f"PIN block filler is incorrect: `{pin_field_str[pin_len+2: 16]}`"
+        )
+
+    pin = pin_field_str[2 : pin_len + 2]
+
+    if not _tools.ascii_numeric(pin):
+        raise ValueError(f"PIN is not numeric: `{pin}`")
+
+    return pin
