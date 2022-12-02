@@ -152,6 +152,48 @@ def test_encode_pan_field_iso_4(pan: str, pan_field: str) -> None:
 
 # fmt: off
 @pytest.mark.parametrize(
+    ["key", "pin", "pan", "error"],
+    [
+        (b"1" * 16, "123", "55555555555555", "PIN must be between 4 and 12 digits long"),
+        (b"1" * 16, "1234567890123", "55555555555555", "PIN must be between 4 and 12 digits long"),
+        (b"1" * 16, "123A", "55555555555555", "PIN must be between 4 and 12 digits long"),
+        (b"1" * 16, "1234", "", "PAN must be between 1 and 19 digits long."),
+        (b"1" * 16, "1234", "555555555555555555555", "PAN must be between 1 and 19 digits long."),
+        (b"1" * 16, "1234", "5555555555555A", "PAN must be between 1 and 19 digits long."),
+    ],
+)
+# fmt: on
+def test_encipher_pinblock_iso_4_exception(
+    key: bytes, pin: str, pan: str, error: str
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.encipher_pinblock_iso_4(key, pin, pan)
+
+
+# deterministic
+@pytest.mark.parametrize(
+    ["key", "pin", "pan", "pin_block"],
+    [
+        (
+            bytes.fromhex("00112233445566778899AABBCCDDEEFF"),
+            "1234",
+            "1234567890123456789",
+            "28B41FDDD29B743E93124BD8E32D921E",
+        ),
+    ],
+)
+def test_encipher_pinblock_iso_4_det(
+    key: bytes, pin: str, pan: str, pin_block: str
+) -> None:
+    pinblock._urandom = lambda n: bytes.fromhex("FF") * n
+    assert pin_block == pinblock.encipher_pinblock_iso_4(key, pin, pan).hex().upper()
+
+
+# fmt: off
+@pytest.mark.parametrize(
     ["pin_block", "pan", "error"],
     [
         (bytes.fromhex("241261AAAAEDCBA9"), "5555555551234567", "PIN block is not ISO format 0: control field `2`"),

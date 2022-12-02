@@ -7,6 +7,7 @@ import secrets as _secrets
 from os import urandom as _urandom
 
 from psec import tools as _tools
+from psec import aes as _aes
 
 __all__ = [
     "encode_pinblock_iso_0",
@@ -14,6 +15,7 @@ __all__ = [
     "encode_pinblock_iso_3",
     "encode_pin_field_iso_4",
     "encode_pan_field_iso_4",
+    "encipher_pinblock_iso_4",
     "decode_pinblock_iso_0",
     "decode_pinblock_iso_2",
     "decode_pinblock_iso_3",
@@ -240,6 +242,50 @@ def encode_pan_field_iso_4(pan: str) -> bytes:
     pan_field = (str(max(0, len(pan) - 12)) + (pan.rjust(12, "0"))).ljust(32, "0")
 
     return _binascii.a2b_hex(pan_field)
+
+
+def encipher_pinblock_iso_4(key: bytes, pin: str, pan: str) -> bytes:
+    r"""Encrypt PIN with PAN binding according to ISO 9564 PIN block format 4. ISO format 4 is constructed using two
+    16-byte fields of PIN and PAN data respecively which are tied in the encryption process resulting in a 16-byte
+    enciphered PIN block.
+    The following steps are performed:
+        - Encode the PIN in the plain text PIN field.
+        - Encode the PAN in the plain text primary account number (PAN) field.
+        - Encipher the plain text PIN field with key K.
+        - Add the resulting intermedate block A modulo-2 (XOR) to the plain text PAN field.
+        - Encipher the resulting intermediate block B with the same key K.
+    Parameters
+    ----------
+    key : bytes
+        Binary AES key.
+    pin : str
+        ASCII Personal Identification Number.
+    pan : str
+        ASCII Personal Account Number.
+    Returns
+    -------
+    bytes
+        Binary 16-byte enciphered PIN block.
+    Raises
+    ------
+    ValueError
+        PIN must be between 4 and 12 digits long
+        Padding must be 8 bytes long.
+        PAN must be between 1 and 19 digits long.
+    Examples
+    --------
+    >>> from psec.pinblock import encipher_pinblock_iso_4
+    >>> key = bytes.fromhex("00112233445566778899AABBCCDDEEFF")
+    >>> pin = "1234"
+    >>> pan = "1234567890123456"
+    >>> encipher_pinblock_iso_4(key, pin, pan).hex().upper() # doctest: +SKIP
+    '7CDF645C86CAF763AE34637A66997534'
+    """
+    pin_field = encode_pin_field_iso_4(pin)
+    pan_field = encode_pan_field_iso_4(pan)
+    intermediate_block_a = _aes.encrypt_aes_ecb(key, pin_field)
+    intermediate_block_b = _tools.xor(intermediate_block_a, pan_field)
+    return _aes.encrypt_aes_ecb(key, intermediate_block_b)
 
 
 def decode_pinblock_iso_0(pinblock: bytes, pan: str) -> str:
