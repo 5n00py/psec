@@ -98,6 +98,31 @@ def test_encode_pinblock_iso_3(pin: str, pan: str, pin_block: str) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ["pin", "error"],
+    [
+        ("123", "PIN must be between 4 and 12 digits long"),
+        ("1234567890123", "PIN must be between 4 and 12 digits long"),
+    ],
+)
+def test_encode_pin_field_iso_4_exception(pin: str, error: str) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.encode_pin_field_iso_4(pin)
+
+
+@pytest.mark.parametrize(
+    ["pin", "pin_field"],
+    [
+        ("1234", "441234AAAAAAAAAA"),
+    ],
+)
+def test_encode_pin_field_iso_4(pin: str, pin_field: str) -> None:
+    assert pin_field == pinblock.encode_pin_field_iso_4(pin).hex().upper()[:16]
+
+
 # fmt: off
 @pytest.mark.parametrize(
     ["pin_block", "pan", "error"],

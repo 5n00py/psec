@@ -4,6 +4,7 @@ other additional information, such as the leght of the PIN.
 
 import binascii as _binascii
 import secrets as _secrets
+from os import urandom as _urandom
 
 from psec import tools as _tools
 
@@ -11,6 +12,7 @@ __all__ = [
     "encode_pinblock_iso_0",
     "encode_pinblock_iso_2",
     "encode_pinblock_iso_3",
+    "encode_pin_field_iso_4",
     "decode_pinblock_iso_0",
     "decode_pinblock_iso_2",
     "decode_pinblock_iso_3",
@@ -162,6 +164,46 @@ def encode_pinblock_iso_3(pin: str, pan: str) -> bytes:
     pan_block = b"\x00\x00" + _binascii.a2b_hex(pan[-13:-1])
 
     return _tools.xor(pinblock, pan_block)
+
+
+def encode_pin_field_iso_4(pin: str) -> bytes:
+    r"""Encode ISO 9564 PIN block format 4 plain text PIN field.
+    ISO format 4 PIN plain text PIN field is a 16 byte value that consits of
+        - Control field. A 4 bit hex value set to 4.
+        - PIN length. A 4 bit hex value in the range from 4 to C.
+        - PIN digits. Each digit is a 4 bit hex value in the range from 0 to 9.
+        - Fill digits. Each digit is a 4 bit hex value set to A.
+        - Random pad character. A 4 bit hex value in the range from 0 to F.
+    Parameters
+    ----------
+    pin : str
+        ASCII Personal Identification Number.
+    Returns
+    -------
+    bytes
+        Binary 16-byte PIN field block.
+    Raises
+    ------
+    ValueError
+        PIN must be between 4 and 12 digits long.
+        Padding must be 8 bytes long.
+    Examples
+    --------
+    >>> from psec.pinblock import encode_pin_field_iso_4
+    >>> encode_pin_field_iso_4("1234").hex().upper()[:16]
+    '441234AAAAAAAAAA'
+    """
+
+    if len(pin) < 4 or len(pin) > 12 or not _tools.ascii_numeric(pin):
+        raise ValueError("PIN must be between 4 and 12 digits long")
+
+    random_pad = _urandom(8).hex().upper()
+
+    pin_len_hex = (
+        len(pin).to_bytes(1, "big").hex()[1]
+    )  # Only the low nibble is relevant, values 4 - C.
+    pinblock_str = "4" + pin_len_hex + pin + "A" * (14 - len(pin)) + random_pad
+    return _binascii.a2b_hex(pinblock_str)
 
 
 def decode_pinblock_iso_0(pinblock: bytes, pan: str) -> str:
