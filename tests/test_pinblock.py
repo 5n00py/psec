@@ -38,6 +38,60 @@ def test_encode_pinblock_iso_0(pin: str, pan: str, pin_block: str) -> None:
 
 # fmt: off
 @pytest.mark.parametrize(
+    ["pin", "transaction_field", "error"],
+    [
+        ("123", "82AB98372D1", "PIN must be between 4 and 12 digits long"),
+        ("1234567890123", "F3928BB23F", "PIN must be between 4 and 12 digits long"),
+        ("123A", "4918DA0283", "PIN must be between 4 and 12 digits long"),
+        ("1234", "123456789", "Transaction digits must be at least `10` hex digits long"),
+        ("1234", "X234567890", "Transaction digits must be at least `10` hex digits long"),
+    ],
+)
+# fmt: on
+def test_encode_pinblock_iso_1_exception(
+    pin: str, transaction_field: str, error: str
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.encode_pinblock_iso_1(pin, transaction_field)
+
+
+@pytest.mark.parametrize(
+    ["pin", "pin_block"],
+    [
+        ("1234", "141234"),
+        ("12345", "1512345"),
+        ("123456789012", "1C123456789012"),
+    ],
+)
+def test_encode_pinblock_iso_1_rnd_filler(pin: str, pin_block: str) -> None:
+    assert (
+        pin_block == pinblock.encode_pinblock_iso_1(pin).hex().upper()[: len(pin) + 2]
+    )
+
+
+@pytest.mark.parametrize(
+    ["pin", "transaction_field", "pin_block"],
+    [
+        ("1234", "FA0A3CB760", "141234FA0A3CB760"),
+        ("12345", "3F9277774", "15123453F9277774"),
+        ("123456789012", "AB", "1C123456789012AB"),
+        ("123456789", "510B0851686557FF2A7C", "19123456789510B0"),
+    ],
+)
+def test_encode_pinblock_iso_1_filler_provided(
+    pin: str, transaction_field, pin_block: str
+) -> None:
+    assert (
+        pin_block
+        == pinblock.encode_pinblock_iso_1(pin, transaction_field).hex().upper()
+    )
+
+
+# fmt: off
+@pytest.mark.parametrize(
     ["pin", "error"],
     [
         ("123", "PIN must be between 4 and 12 digits long"),
