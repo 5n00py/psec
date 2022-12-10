@@ -307,6 +307,42 @@ def test_decode_pinblock_iso_0(pin: str, pin_block: bytes, pan: str) -> None:
 @pytest.mark.parametrize(
     ["pin_block", "error"],
     [
+        (bytes.fromhex("11223344556677"), "PIN block must be 8 bytes long"),
+        (bytes.fromhex("112233445566778899"), "PIN block must be 8 bytes long"),
+        (bytes.fromhex("241234ABCDEF0123"), "PIN block is not ISO format 1: control field `2`"),
+        (bytes.fromhex("13123FABCDEF0123"), "PIN length must be between 4 and 12: `3`"),
+        (bytes.fromhex("1D1234567890123F"), "PIN length must be between 4 and 12: `13`"),
+        (bytes.fromhex("14A234567890123F"), "PIN is not numeric: `A234`"),
+    ],
+)
+# fmt: on
+def test_decode_pinblock_iso_1_exception(
+    pin_block: bytes, error: str
+) -> None:
+    with pytest.raises(
+        ValueError,
+        match=error,
+    ):
+        pinblock.decode_pinblock_iso_1(pin_block)
+
+
+@pytest.mark.parametrize(
+    ["pin", "pin_block"],
+    [
+        ("1234", bytes.fromhex("141234FAAAEDCBA9")),
+        ("12345", bytes.fromhex("1512345D8DCBA9FA")),
+        ("1234567890", bytes.fromhex("1A1234567890DC37")),
+        ("123456789012", bytes.fromhex("1C123456789012AA")),
+    ],
+)
+def test_decode_pinblock_iso_1(pin: str, pin_block: bytes) -> None:
+    assert pin == pinblock.decode_pinblock_iso_1(pin_block)
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    ["pin_block", "error"],
+    [
         (bytes.fromhex("041234FFFFFFFFFF"), "PIN block is not ISO format 2: control field `0`"),
         (bytes.fromhex("29123456789FFF"), "PIN block must be 8 bytes long"),
         (bytes.fromhex("2F123456789012FF"), "PIN length must be between 4 and 12: `15`"),
