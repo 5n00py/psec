@@ -4,6 +4,7 @@ for retail payment transactions and cardholder authentication.
 psec modules:
 
     - tr31 - TR-31 key block wrapping and unwrapping
+    - tr34 - TR-34 key block wrapping and unwrapping
     - aes - Advanced Encryption Standard
     - des - Triple DES
     - cvv - Card Verification Value
@@ -17,4 +18,4 @@ psec modules:
 __version__ = "1.3.0"
 __author__ = "Konstantin Novichikhin <konstantin.novichikhin@gmail.com>"
 
-from psec import aes, cvv, des, mac, padding, pin, pinblock, tools, tr31
+from psec import aes, cvv, des, mac, padding, pin, pinblock, tools, tr31, tr34
