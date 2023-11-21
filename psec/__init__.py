@@ -8,6 +8,7 @@ psec modules:
     - des - Triple DES
     - cvv - Card Verification Value
     - mac - Message Authentication Code
+    - padding - Adding and removing padding data
     - pin - Personal Identification Number
     - pinblock - PIN Blocks encoding and decoding
     - tools - Miscellaneous tools, such as xor.
@@ -16,4 +17,4 @@ psec modules:
 __version__ = "1.3.0"
 __author__ = "Konstantin Novichikhin <konstantin.novichikhin@gmail.com>"
 
-from psec import aes, cvv, des, mac, pin, pinblock, tools, tr31
+from psec import aes, cvv, des, mac, padding, pin, pinblock, tools, tr31
