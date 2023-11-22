@@ -28,6 +28,16 @@ as per CMS standards. Furthermore, to ensure the integrity and authenticity of
 the key block, a SignedData type is used. The SignedData type, as per CMS
 standards, provides digital signature functionality that verifies the origin
 and integrity of the key block.
+
+The implementation is designed with flexibility to accommodate different
+interpretations of TR34 by various KRDs, though direct coordination with
+hardware aspects and secure certificate storage is essential for real-world
+applications.
+
+The implementation does NOT enforce compliance requirements
+surch as the strength of the ephemeral key being equal or greater than the
+strength of the clear key encrypted, which may be necessary in certain contexts
+like PCI.
 """
 
 from typing import Union as _Union
@@ -247,11 +257,12 @@ class KeyBlock(_core.Sequence):
 
     def encrypt(self, ephemeral_key: bytes, algo: _algos.EncryptionAlgorithm) -> bytes:
         r"""Encrypt the DER encoded and PKCS#7 padded key block using the
-        specified algorithm, ephemeral key and IV.
+        specified algorithm and ephemeral key.
 
-        According to TR34-2019, table 15, p. 63 the ephemeral key can be either
-        of type TDES with bits size 192 (3 keys) or of type AES with bits size
-        128. Other types and strengths are not supported.
+        This method supports encryption with either TDES 3 keys or AES-128
+        algorithms in CBC mode as specified in TR34-2019, table 15, p. 63. The
+        ephemeral key's strength should align with the requirements of the
+        encryption algorithm being used.
 
         IMPORTANT: In the context of TR34 some compliance requirements (e.g. PCI)
         might demand that the strength of the ephemeral key is equal or greater
@@ -263,14 +274,15 @@ class KeyBlock(_core.Sequence):
         TR34-2019 but given through the CMS context (cf. RFC 5652, section 6.3:
         Content-encryption Process) and verified through the test vectors.
 
+
         Parameters
         ----------
         ephemeral_key : bytes
-            The ephemeral key to use for encryption.
-        iv : bytes
-            The initialization vector to use for encryption.
-        algorithm : str
-            The algorithm to use for encryption, either 'TDES' or 'AES-128'.
+            The ephemeral key used for encryption. Its length must match the
+            expected key length of the specified algorithm.
+        algo : _algos.EncryptionAlgorithm
+            An object representing the encryption algorithm to use, either
+            "tripledes_3key" or "aes128_cbc" and an initialization vector (IV).
 
         Returns
         -------
@@ -280,11 +292,10 @@ class KeyBlock(_core.Sequence):
         Raises
         ------
         ValueError
-            Invalid ephemeral key length for TDES.
-            Invalid IV length for TDES.
-            Invalid ephemeral key length for AES-128.
-            Invalid IV length for AES-128.
-            Algorithm must be either AES-128 or TDES.
+            Invalid ephemeral key length: 'actual_length'. Expected 'expected_length'
+            No IV provided.
+            Invalid IV length: 'actual_length'. Expected 'expected_block_size'.
+            Algorithm must be either 'tripledes_3key' or 'aes128_cbc'.
         """
 
         # Encode the key block using DER:
