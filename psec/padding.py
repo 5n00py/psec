@@ -1,6 +1,17 @@
+r"""
+Padding Utilities Module
+
+This module provides functions for adding and removing PKCS#7 padding, as 
+specified in RFC 5652, Cryptographic Message Syntax (CMS), which is the basis 
+for padding in various cryptographic operations.
+"""
+
+__all__ = ["pad_pkcs7", "unpad_pkcs7"]
+
+
 def pad_pkcs7(data: bytes, block_size: int) -> bytes:
-    """
-    Add PKCS#7 padding to the given data up to the next multiple of the block_size.
+    r"""Add PKCS#7 padding to the given data up to the next multiple of the
+    block_size.
 
     Parameters:
     -----------
@@ -30,14 +41,13 @@ def pad_pkcs7(data: bytes, block_size: int) -> bytes:
         raise ValueError("Block size must be a positive integer")
 
     pad_len = block_size - (len(data) % block_size)
-
     padding = bytes([pad_len] * pad_len)
     return data + padding
 
 
 def unpad_pkcs7(data: bytes) -> bytes:
-    """
-    Remove PKCS#7 padding from the given data or raise a ValueError if padding format is wrong.
+    r"""Remove PKCS#7 padding from the given data or raise a ValueError if
+    padding format is wrong.
 
     Parameters:
     -----------
